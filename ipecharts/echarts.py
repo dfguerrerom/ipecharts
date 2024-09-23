@@ -31,5 +31,5 @@ class EChartsRawWidget(DOMWidget):
     option = Dict(default_value={}).tag(sync=True, **widget_serialization)
     style = Dict(
         {},
-        help="Style configuration",
+        help="Style configura tion",
     ).tag(sync=True)
