@@ -191,8 +191,15 @@ option = Option(
     series=[line]
 )
 
-# Create the EChartsWidget without specifying the style
-chart = EChartsWidget(option=option)
+# Define the style for the widget
+style = {
+    'width': '450px',
+    'height': '300px',
+    'border': '5px solid #ccc'
+}
+
+# Create the EChartsWidget with the option and style
+chart = EChartsWidget(option=option, style=style)
 
 # Display the chart
 chart
