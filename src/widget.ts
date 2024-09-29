@@ -24,9 +24,7 @@ export class EChartsWidgetModel extends BaseEChartsModel {
   }
 
   valueChanged(m: EChartsWidgetModel): void {
-    console.log('valueChanged', m);
     if (m?.changed) {
-      console.log('changed', m.changed);
       Object.values(m.changed).forEach(it => {
         if (Array.isArray(it)) {
           it.forEach(subModel => {
@@ -38,7 +36,6 @@ export class EChartsWidgetModel extends BaseEChartsModel {
             }
           });
         } else {
-          console.log('aasdf', m.changed);
           if (it?.model_id) {
             EChartsWidgetModel.updateManager?.registerChildModel({
               child: it,
