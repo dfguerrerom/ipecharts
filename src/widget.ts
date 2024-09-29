@@ -1,41 +1,18 @@
 // Copyright (c) Trung Le
 // Distributed under the terms of the Modified BSD License.
 
-import {
-  DOMWidgetModel,
-  DOMWidgetView,
-  IBackboneModelOptions,
-  ISerializers,
-  WidgetView,
-  unpack_models
-} from '@jupyter-widgets/base';
-import * as echarts from 'echarts';
-import 'echarts-gl';
-import { MODULE_NAME, MODULE_VERSION } from './version';
+import { BaseEChartsModel } from './baseEchartsModel';
+import { BaseEChartsView } from './baseEchartsView';
+import { ISerializers, unpack_models } from '@jupyter-widgets/base';
 import { IUpdateManager } from './types';
 import { ObjectHash } from 'backbone';
-import { IThemeManager } from '@jupyterlab/apputils';
-import { isLightTheme } from './tools';
-import { Debouncer } from '@lumino/polling';
-export class EChartsWidgetModel extends DOMWidgetModel {
-  defaults() {
-    return {
-      ...super.defaults(),
-      _model_name: EChartsWidgetModel.model_name,
-      _model_module: EChartsWidgetModel.model_module,
-      _model_module_version: EChartsWidgetModel.model_module_version,
-      _view_name: EChartsWidgetModel.view_name,
-      _view_module: EChartsWidgetModel.view_module,
-      _view_module_version: EChartsWidgetModel.view_module_version,
-      option: {},
-      style: {}
-    };
-  }
+import { IBackboneModelOptions } from '@jupyter-widgets/base';
+import { MODULE_NAME, MODULE_VERSION } from './version';
 
+export class EChartsWidgetModel extends BaseEChartsModel {
   static serializers: ISerializers = {
-    ...DOMWidgetModel.serializers,
+    ...BaseEChartsModel.serializers,
     option: { deserialize: unpack_models as any }
-    // Add any extra serializers here
   };
 
   initialize(attributes: ObjectHash, options: IBackboneModelOptions): void {
@@ -47,7 +24,9 @@ export class EChartsWidgetModel extends DOMWidgetModel {
   }
 
   valueChanged(m: EChartsWidgetModel): void {
+    console.log('valueChanged', m);
     if (m?.changed) {
+      console.log('changed', m.changed);
       Object.values(m.changed).forEach(it => {
         if (Array.isArray(it)) {
           it.forEach(subModel => {
@@ -59,6 +38,7 @@ export class EChartsWidgetModel extends DOMWidgetModel {
             }
           });
         } else {
+          console.log('aasdf', m.changed);
           if (it?.model_id) {
             EChartsWidgetModel.updateManager?.registerChildModel({
               child: it,
@@ -69,6 +49,7 @@ export class EChartsWidgetModel extends DOMWidgetModel {
       });
     }
   }
+
   static updateManager: IUpdateManager | null = null;
 
   static model_name = 'EChartsWidgetModel';
@@ -79,79 +60,12 @@ export class EChartsWidgetModel extends DOMWidgetModel {
   static view_module_version = MODULE_VERSION;
 }
 
-export class EChartsWidgetView extends DOMWidgetView {
-  initialize(
-    parameters: WidgetView.IInitializeParameters<DOMWidgetModel>
-  ): void {
-    super.initialize(parameters);
-    if (EChartsWidgetView.themeManager) {
-      const themeManager = EChartsWidgetView.themeManager;
-      themeManager.themeChanged.connect(() => {
-        const currentTheme = isLightTheme() ? 'light' : 'dark';
-        if (this._myChart) {
-          this._myChart.dispose();
-          this._myChart = echarts.init(this.el, currentTheme);
-          this._myChart.setOption(this._createOptionDict());
-        }
-      });
-    }
-    this.model.on('change', this.value_changed, this);
-    const resizeChart = () => this._myChart?.resize();
-    const debouncer = new Debouncer(resizeChart, 100);
-    window.addEventListener('resize', () => {
-      debouncer.invoke();
-    });
+export class EChartsWidgetView extends BaseEChartsView {
+  getChartOption(): any {
+    return this.createOptionDict();
   }
 
-  render() {
-    super.render();
-
-    const currentTheme = isLightTheme() ? 'light' : 'dark';
-
-    const widget = this.luminoWidget;
-    widget.addClass('echarts-widget');
-    this._myChart = echarts.init(this.el, currentTheme);
-
-    this._myChart.setOption(this._createOptionDict());
-    this.setStyle();
-  }
-
-  value_changed() {
-    if (this._myChart) {
-      this._myChart.setOption(this._createOptionDict());
-    }
-  }
-  processLuminoMessage(msg: any) {
-    if (msg['type'] === 'resize' || msg['type'] === 'after-attach') {
-      window.dispatchEvent(new Event('resize'));
-    }
-  }
-  setStyle(): void {
-    const style: { [key: string]: string } = this.model.get('style');
-    if (!style) {
-      return;
-    }
-    for (const [key, value] of Object.entries(style)) {
-      const fixedKey = key
-        .split(/(?=[A-Z])/)
-        .map(s => s.toLowerCase())
-        .join('-');
-
-      if (this.el.style) {
-        this.el.style.setProperty(fixedKey, value);
-      }
-    }
-    if (this._myChart) {
-      this._myChart.resize();
-    }
-  }
-  update_classes(old_classes: string[], new_classes: string[]): void {
-    super.update_classes(old_classes, new_classes);
-    if (this._myChart) {
-      this._myChart.resize();
-    }
-  }
-  _createOptionDict(): { [key: string]: any } {
+  private createOptionDict(): { [key: string]: any } {
     const option = this.model.get('option');
     const optionDict: { [key: string]: any } = option.toDict();
 
@@ -173,6 +87,5 @@ export class EChartsWidgetView extends DOMWidgetView {
     return chartOption;
   }
 
-  static themeManager: IThemeManager | null = null;
-  private _myChart?: echarts.ECharts;
+  static themeManager = BaseEChartsView.themeManager;
 }
